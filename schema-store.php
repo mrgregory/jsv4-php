@@ -30,6 +30,31 @@ class SchemaStore {
 		}
 		return $value;
 	}
+
+	private static function jsonMerge($object1, $object2)
+	{
+		$merged = clone $object1;
+		foreach ($object2 as $key => &$value)
+		{
+			if (is_object($value) && isset($merged->$key) && is_object($merged->$key))
+			{
+				$merged->$key = object_merge_recursive($merged->$key, $value);
+			}
+			elseif ( is_array($object2) )
+			{
+				if ( is_numeric($key) )
+				{
+					if ( !in_array($value, $merged) ) $merged[] = $value;
+				}
+				else $merged[$key] = $value;
+			}
+			else
+			{
+				$merged->$key = $value;
+			}
+		}
+		return $merged;
+	}
 	
 	private static function isNumericArray($array) {
 		$count = count($array);
@@ -147,7 +172,7 @@ class SchemaStore {
 			if (isset($schema->{'$ref'})) {
 				$refUrl = $schema->{'$ref'} = self::resolveUrl($url, $schema->{'$ref'});
 				if ($refSchema = $this->get($refUrl)) {
-					$schema = $refSchema;
+					$schema = self::jsonMerge($refSchema, $schema);
 					return;
 				} else {
 					$urlParts = explode("#", $refUrl);
